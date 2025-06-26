@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Predicción de Consumo de Energía</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600&family=Roboto&display=swap" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Roboto', sans-serif;
+            background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+
+        h1 {
+            font-family: 'Orbitron', sans-serif;
+            color: #00e676;
+            font-size: 2.5rem;
+            margin-bottom: 40px;
+            text-align: center;
+            text-shadow: 0 0 10px #00e676;
+        }
+
+        /* Estilo para la tarjeta de info */
+        .info-card {
+            max-width: 700px;
+            background-color: rgba(255, 255, 255, 0.05);
+            border-left: 4px solid #00e676;
+            padding: 20px 25px;
+            margin-bottom: 40px;
+            border-radius: 12px;
+            box-shadow: 0 0 12px rgba(0, 230, 118, 0.2);
+            color: #d4ffea;
+        }
+
+        .info-card h2 {
+            color: #00e676;
+            margin-top: 0;
+        }
+
+        .info-card ul {
+            padding-left: 20px;
+        }
+
+        .info-card ul ul {
+            list-style-type: circle;
+            padding-left: 20px;
+        }
+
+        form {
+            background-color: rgba(255, 255, 255, 0.05);
+            border: 2px solid #00e676;
+            border-radius: 16px;
+            padding: 40px 35px;
+            max-width: 600px;
+            width: 100%;
+            box-shadow: 0 0 20px rgba(0, 230, 118, 0.3);
+            transition: transform 0.3s ease;
+        }
+
+        form:hover {
+            transform: scale(1.02);
+        }
+
+        .form-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .form-field {
+            flex: 1 1 45%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        label {
+            margin-bottom: 6px;
+            font-weight: bold;
+        }
+
+        input[type="text"],
+        select {
+            padding: 10px;
+            border-radius: 8px;
+            border: none;
+            background-color: #fff;
+            color: #000;
+            font-size: 1rem;
+        }
+
+        input[type="submit"] {
+            margin-top: 30px;
+            width: 100%;
+            padding: 14px;
+            background-color: #00e676;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            color: #000;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        input[type="submit"]:hover {
+            background-color: #1de9b6;
+        }
+
+        #resultado {
+            margin-top: 30px;
+            font-size: 1.2rem;
+            text-align: center;
+            color: #ffea00;
+        }
+
+        @media (max-width: 600px) {
+            .form-field {
+                flex: 1 1 100%;
+            }
+        }
+    </style>
+    <script>
+        function predecirConsumo(event) {
+            event.preventDefault();
+
+            const co2 = document.getElementById('co2').value;
+            const reactive = document.getElementById('reactive').value;
+            const lagging = document.getElementById('lagging').value;
+            const leading = document.getElementById('leading').value;
+            const nsm = document.getElementById('nsm').value;
+            const tipo = document.getElementById('tipo').value;
+
+            fetch('/predict', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `CO2(tCO2)=${co2}&Lagging_Current_Reactive.Power_kVarh=${reactive}&Lagging_Current_Power_Factor=${lagging}&Leading_Current_Power_Factor=${leading}&NSM=${nsm}&Load_Type=${tipo}`
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        document.getElementById('resultado').innerText = '⚠️ Error: ' + data.error;
+                    } else {
+                        document.getElementById('resultado').innerText = '⚡ Uso estimado (kWh): ' + data.Usage_kWh;
+                    }
+                })
+                .catch(error => {
+                    document.getElementById('resultado').innerText = '❌ Error en la solicitud';
+                    console.error('Error:', error);
+                });
+        }
+    </script>
+</head>
+
+<body>
+    <h1>⚡ Predicción de Consumo de Energía</h1>
+
+    <!-- Información del Dataset -->
+    <section class="info-card">
+        <h2>📊 Información del conjunto de datos</h2>
+        <p><strong>Fuente:</strong> Daewoo Steel Co. Ltd, Gwangyang, Corea del Sur.</p>
+        <p>Se recopila información sobre el consumo de energía industrial, almacenada en la nube y disponible también a través del portal oficial de la <em>Korea Electric Power Corporation</em>.</p>
+
+        <h3>🔍 Variables utilizadas en la predicción:</h3>
+        <ul>
+            <li><strong>CO₂ (tCO₂):</strong> Emisiones de dióxido de carbono en toneladas.</li>
+            <li><strong>Potencia Reactiva:</strong> Energía reactiva de corriente atrasada en kVarh.</li>
+            <li><strong>Factor de Potencia Lagging:</strong> Porcentaje de eficiencia con corriente atrasada.</li>
+            <li><strong>Factor de Potencia Leading:</strong> Porcentaje con corriente adelantada.</li>
+            <li><strong>NSM:</strong> Número de segundos desde medianoche (indicador temporal).</li>
+            <li><strong>Tipo de Carga:</strong> Clasificación del consumo eléctrico:
+                <ul>
+                    <li><strong>0</strong>: Carga Ligera (Light_Load)</li>
+                    <li><strong>1</strong>: Carga Media (Medium_Load)</li>
+                    <li><strong>2</strong>: Carga Máxima (Maximum_Load)</li>
+                </ul>
+            </li>
+        </ul>
+    </section>
+
+    <!-- Formulario -->
+    <form id="formulario" onsubmit="predecirConsumo(event)">
+        <div class="form-group">
+            <div class="form-field">
+                <label for="co2">CO₂ (tCO₂):</label>
+                <input type="text" id="co2" name="CO2(tCO2)" required>
+            </div>
+            <div class="form-field">
+                <label for="reactive">Potencia Reactiva (kVarh):</label>
+                <input type="text" id="reactive" name="Lagging_Current_Reactive.Power_kVarh" required>
+            </div>
+            <div class="form-field">
+                <label for="lagging">Factor de Potencia Lagging:</label>
+                <input type="text" id="lagging" name="Lagging_Current_Power_Factor" required>
+            </div>
+            <div class="form-field">
+                <label for="leading">Factor de Potencia Leading:</label>
+                <input type="text" id="leading" name="Leading_Current_Power_Factor" required>
+            </div>
+            <div class="form-field">
+                <label for="nsm">NSM:</label>
+                <input type="text" id="nsm" name="NSM" required>
+            </div>
+            <div class="form-field">
+                <label for="tipo">Tipo de Carga:</label>
+                <select id="tipo" name="Load_Type" required>
+                    <option value="0">Light_Load</option>
+                    <option value="1">Medium_Load</option>
+                    <option value="2">Maximum_Load</option>
+                </select>
+            </div>
+        </div>
+        <input type="submit" value="🔍 Predecir Consumo">
+    </form>
+
+    <p id="resultado"></p>
+</body>
+
+</html>
